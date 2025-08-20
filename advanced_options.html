@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
   (async () => {
     const res = await fetch('/get_expiration_time/');
     const data = await res.json();
-    document.getElementById('expire-days').value = data.expiration_time_days || 7;
+    document.getElementById('expire-days').value = data.expiration_time_days || 0;
   })();
 });
 

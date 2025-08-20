@@ -490,11 +490,11 @@ def load_expiration_days_from_file() -> int:
         try:
             with open(CONFIG_PATH, "r") as f:
                 data = json.load(f)
-                return int(data.get("expiration_days", 7))
+                return int(data.get("expiration_days",0 ))
         except Exception:
-            return 7
+            return 0
     else:
-        return 7
+        return 0
 
 def save_expiration_days_to_file(value: int):
     with open(CONFIG_PATH, "w") as f:
