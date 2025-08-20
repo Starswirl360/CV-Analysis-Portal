@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CV Analysis Assistant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      position: relative;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .card-container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      width: 200px;
+      height: 150px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      color: #007bff;
+      font-size: 1.1em;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      background-color: #e9f2ff;
+    }
+
+    .icon {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+     #privacyBtn {
+      position: fixed;
+      bottom: 18px;
+      right: 10px;
+      font-size: 0.75rem;
+      color: #666;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      transition: color 0.3s ease;
+      user-select: none;
+      z-index: 1200;
+    }
+
+    #privacyBtn:hover,
+    #privacyBtn:focus {
+      color: #0066cc;
+      outline: none;
+      background: rgba(0, 102, 204, 0.1);
+    }
+
+    /* Modal backdrop */
+    #privacyModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.48);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      z-index: 1150;
+      padding: 20px;
+    }
+
+    #privacyModal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Modal content */
+    #privacyModal > div {
+      background: #fff;
+      border-radius: 14px;
+      max-width: 650px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 30px 35px;
+      box-shadow: 0 8px 28px rgb(0 0 0 / 0.2);
+      position: relative;
+      transform: translateY(-25px);
+      transition: transform 0.35s ease;
+    }
+
+    #privacyModal.active > div {
+      transform: translateY(0);
+    }
+
+    /* Close button */
+    #closeModal {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: transparent;
+      border: none;
+      font-size: 1.6rem;
+      color: #666;
+      cursor: pointer;
+      transition: color 0.3s ease;
+      user-select: none;
+    }
+
+    #closeModal:hover,
+    #closeModal:focus {
+      color: #000;
+      outline: none;
+    }
+
+    /* Modal headings and text */
+    #privacyModal h2 {
+      margin-top: 0;
+      font-weight: 700;
+      color: #004a99;
+      margin-bottom: 20px;
+    }
+
+    #privacyModal p {
+      line-height: 1.5;
+      margin-bottom: 15px;
+      font-size: 0.95rem;
+      color: #444;
+    }
+
+    #privacyModal strong {
+      color: #222;
+    }
+
+    /* Scrollbar for modal */
+    #privacyModal > div::-webkit-scrollbar {
+      width: 8px;
+    }
+    #privacyModal > div::-webkit-scrollbar-thumb {
+      background: #b3c7f9;
+      border-radius: 4px;
+    }
+    #advancedOptionsBtn {
+  position: fixed;
+  bottom: 60px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  background-color: #1a73e8;
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+  z-index: 1000;
+}
+
+#advancedOptionsBtn:hover {
+  background-color: #155ab6;
+}
+
+.gear-icon {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease;
+}
+
+#advancedOptionsBtn:hover .gear-icon {
+  transform: rotate(30deg);
+}
+#creditFooter {
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+  font-size: 0.75rem;
+  color: #999;
+  font-style: italic;
+  user-select: none;
+  z-index: 900;
+}
+#creditFooter strong {
+  color: #666;
+}
+
+
+  </style>
+</head>
+<body>
+
+  <h1>CV Analysis Assistant</h1>
+  <div class="card-container">
+    <a class="card" href="upload.html">
+      <div class="icon">📝</div>
+      Upload Job Offers
+    </a>
+    <a class="card" href="send.html">
+      <div class="icon">✉️</div>
+      Send Form to Applicant
+    </a>
+    <a class="card" href="summary.html">
+      <div class="icon">📊</div>
+      Excel Report
+    </a>
+  </div>
+<!-- Gear button for Advanced Options -->
+<button id="advancedOptionsBtn" title="Advanced Options" onclick="window.location.href='/advanced_options'">
+  <svg class="gear-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
+    <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.032 7.032 0 0 0-1.62-.94L14.5 2.5a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.5l-.38 2.36c-.59.23-1.13.54-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 9.36a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.23.4.32.64.22l2.39-.96c.49.4 1.03.71 1.62.94l.38 2.36a.5.5 0 0 0 .5.5h4c.25 0 .46-.18.5-.42l.38-2.36c.59-.23 1.13-.54 1.62-.94l2.39.96c.24.1.51 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/>
+  </svg>
+</button>
+
+
+  <!-- Privacy Policy button -->
+  <button id="privacyBtn" aria-haspopup="dialog" aria-controls="privacyModal" title="Privacy Policy">
+    Privacy Policy
+  </button>
+  <!-- Privacy Policy modal -->
+  <div id="privacyModal" role="dialog" aria-modal="true" aria-labelledby="privacyTitle" tabindex="-1">
+    <div>
+      <button id="closeModal" aria-label="Close Privacy Policy">&times;</button>
+      <h2 id="privacyTitle">Privacy Policy</h2>
+      <p>Effective: 11.07.2025</p>
+
+<p>This Privacy Policy applies to the use of this application by authorised migration agents in Australia. The application is a tool designed to support the management and analysis of application data submitted by clients (applicants) for the purpose of migration assistance.</p>
+
+  <strong>1. Data Controller and Processor Roles</strong>
+  <p>The application functions as a <strong>data processor</strong>, acting on behalf of authorised <strong>migration agents</strong>, who act as the <strong>data controllers</strong> under the <em>Privacy Act 1988 (Cth)</em>. Migration agents are responsible for ensuring that any personal or sensitive information uploaded into the system is collected and used in accordance with the Australian Privacy Principles (APPs).</p>
+
+  <strong>2. Purpose of Data Processing</strong>
+  <p>The system processes personal and sensitive information provided by or on behalf of applicants, including but not limited to:</p>
+  <ul>
+    <li>Identification details</li>
+    <li>Contact information</li>
+    <li>Employment and education history</li>
+    <li>Supporting documentation relevant to migration applications</li>
+  </ul>
+  <p>Data is processed exclusively for migration-related services as instructed by the migration agent.</p>
+
+  <strong>3. Access Restrictions</strong>
+  <p>Only authorised migration agents with valid credentials are permitted to access the application. Applicants do <strong>not</strong> have direct access to the system and do <strong>not</strong> interact with it directly.</p>
+
+  <strong>4. Data Retention and Deletion</strong>
+  <p>To protect applicant privacy and minimise data risk, all uploaded files and applicant data are automatically deleted from the system <strong>30 days</strong> after upload. Migration agents are responsible for storing required documentation outside the platform if long-term retention is needed.</p>
+
+  <strong>5. Security Measures</strong>
+  <p>The application implements industry-standard security practices, including:</p>
+  <ul>
+    <li>Encryption in transit and at rest</li>
+    <li>User authentication and access control</li>
+    <li>Regular security updates and vulnerability assessments</li>
+  </ul>
+  <p>All data is hosted in secure infrastructure located in compliance with Australian data sovereignty requirements.</p>
+
+  <strong>6. Migration Agent Responsibility</strong>
+  <p>It is the responsibility of the migration agent to:</p>
+  <ul>
+    <li>Obtain appropriate consent from applicants where required</li>
+    <li>Ensure that applicants are informed about the processing of their data</li>
+    <li>Comply with all obligations under the <em>Privacy Act 1988</em> and relevant regulations</li>
+  </ul>
+
+  <strong>7. Contact</strong>
+  <p>For questions or concerns about this Privacy Policy or the system’s data handling practices, please contact your migration agency or the system administrator.</p>
+    </div>
+  </div>
+    <!-- Subtelna stopka -->
+  <footer id="creditFooter">
+    Made by <strong>Kacper Łukijańczuk</strong>
+  </footer>
+
+
+  <script>
+    const privacyBtn = document.getElementById('privacyBtn');
+    const privacyModal = document.getElementById('privacyModal');
+    const closeModalBtn = document.getElementById('closeModal');
+
+    function openModal() {
+      privacyModal.classList.add('active');
+      privacyModal.focus();
+    }
+
+    function closeModal() {
+      privacyModal.classList.remove('active');
+      privacyBtn.focus();
+    }
+
+    privacyBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+
+    window.addEventListener('click', (e) => {
+      if (e.target === privacyModal) {
+        closeModal();
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === "Escape" && privacyModal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+  </script>
+
+</body>
+</html>

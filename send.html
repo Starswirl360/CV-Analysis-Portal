@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Send to Applicant</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 30px 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+      color: #333;
+    }
+    label, input, button {
+      display: block;
+      width: 100%;
+      margin-top: 12px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    #criteriaDescription {
+      margin-top: 6px;
+      font-style: italic;
+      color: #555;
+      min-height: 20px;
+    }
+    #notify {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      min-width: 260px;
+      padding: 15px 20px;
+      border-radius: 6px;
+      color: white;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(120%);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      z-index: 1500;
+    }
+    #notify.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+    #notify.success {
+      background-color: #28a745;
+      color: white;
+    }
+    #notify.error {
+      background-color: #f8d7da;
+      color: #a71d2a;
+      border: 1px solid #f5c2c7;
+    }
+    .help-icon {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #1a73e8;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      width: 30px;
+      height: 30px;
+      text-align: center;
+      line-height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 2000;
+    }
+    .tooltip-bubble {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background: white;
+      color: #333;
+      padding: 14px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 300px;
+      font-size: 14px;
+      line-height: 1.4;
+      display: none;
+      z-index: 2000;
+    }
+    .tooltip-bubble.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<a href="/" style="
+  display: inline-block;
+  margin-bottom: 20px;
+  background-color: #1a73e8;
+  color: white;
+  padding: 10px 18px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+">
+  ← Back to Main Panel
+</a>
+
+<div class="container">
+  <h2>Send Form to Applicant</h2>
+  <form id="zapierForm">
+    <label for="form_id_zapier">Select or input Job Offer ID:</label>
+    <input list="criteria_list" id="form_id_zapier" name="form_id_zapier" required autocomplete="off" />
+    <datalist id="criteria_list"></datalist>
+    <div id="criteriaDescription"></div>
+
+    <label for="email_zapier">Email address:</label>
+    <input type="email" id="email_zapier" required />
+
+    <button type="submit">Send to Applicant</button>
+  </form>
+  <div id="zapierResult"></div>
+</div>
+
+<!-- Notify box -->
+<div id="notify" role="alert" aria-live="assertive"></div>
+<div class="help-icon" id="helpIcon">?</div>
+<div class="tooltip-bubble" id="helpTooltip">
+Once applicants respond to a job offer, you can send them the recruitment form here.
+Select the job offer and the applicant's email address to which the form will be sent.
+</div>
+
+<script>
+const zapierForm = document.getElementById("zapierForm");
+const zapierResult = document.getElementById("zapierResult");
+const formIdInput = document.getElementById("form_id_zapier");
+const criteriaDescription = document.getElementById("criteriaDescription");
+const datalist = document.getElementById("criteria_list");
+const notify = document.getElementById("notify");
+const emailInput = document.getElementById("email_zapier");
+
+let criteriaList = [];
+
+// Sprawdzenie poprawności e-maila (regex + blokowanie domen tymczasowych)
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+  return re.test(email);
+}
+const blockedDomains = [
+  "tempmail.com", "mailinator.com", "10minutemail.com",
+  "guerrillamail.com", "discard.email", "fakeinbox.com"
+];
+
+function showNotify(message, type = "success") {
+  clearTimeout(notifyTimeout);
+  notify.textContent = message;
+  notify.className = '';
+  notify.classList.add(type);
+  notify.classList.add("show");
+  notifyTimeout = setTimeout(() => {
+    notify.classList.remove("show");
+  }, 4000);
+}
+
+let notifyTimeout;
+
+zapierForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const formId = formIdInput.value.trim();
+  const email = emailInput.value.trim();
+
+  if (!formId || !email) {
+    showNotify("Please enter both form ID and email.", "error");
+    return;
+  }
+
+  if (!isValidEmail(email)) {
+    showNotify("Invalid email address format.", "error");
+    return;
+  }
+
+  const emailDomain = email.split("@")[1]?.toLowerCase();
+  if (blockedDomains.includes(emailDomain)) {
+    showNotify("Temporary email domains are not allowed.", "error");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("form_id", formId);
+  formData.append("email", email);
+
+  zapierResult.innerHTML = '<p>⏳ Sending to Zapier...</p>';
+
+  try {
+    const response = await fetch("/send_to_zapier/", {
+      method: "POST",
+      body: formData
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      showNotify(`Sent to Zapier: ${result.email}`, "success");
+      zapierResult.innerHTML = `<p class="success">✅ Sent to Zapier: <strong>${result.email}</strong></p>`;
+    } else {
+      let errorText = await response.text();
+      try {
+        const errJson = JSON.parse(errorText);
+        if (errJson.detail) errorText = errJson.detail;
+      } catch {}
+      showNotify(`Error: ${errorText}`, "error");
+      zapierResult.innerHTML = `<p class="error">❌ Error: ${errorText}</p>`;
+    }
+  } catch (err) {
+    showNotify("Network error. Please try again.", "error");
+    zapierResult.innerHTML = `<p class="error">❌ Network error. Please try again.</p>`;
+  }
+});
+
+// Dynamiczne podświetlanie nieprawidłowego e-maila
+emailInput.addEventListener("input", () => {
+  const val = emailInput.value.trim();
+  const domain = val.split("@")[1]?.toLowerCase() || "";
+
+  if (!isValidEmail(val) || blockedDomains.includes(domain)) {
+    emailInput.style.borderColor = "red";
+  } else {
+    emailInput.style.borderColor = "";
+  }
+});
+
+function updateCriteriaDescription() {
+  const val = formIdInput.value.trim();
+  if (!val) {
+    criteriaDescription.textContent = "";
+    return;
+  }
+  const found = criteriaList.find(item => item.form_id === val);
+  if (found) {
+    criteriaDescription.textContent = `${found.position} at ${found.company}`;
+  } else {
+    criteriaDescription.textContent = "No matching job offer found.";
+  }
+}
+
+async function loadJobCriteriaList() {
+  const response = await fetch("/job_criteria_list/");
+  if (!response.ok) return;
+
+  criteriaList = await response.json();
+  criteriaList.forEach(item => {
+    const option = document.createElement("option");
+    option.value = item.form_id;
+    option.textContent = `${item.position} at ${item.company}`;
+    datalist.appendChild(option);
+  });
+}
+
+formIdInput.addEventListener("input", updateCriteriaDescription);
+window.addEventListener("load", loadJobCriteriaList);
+
+// Pomocnik
+const helpIcon = document.getElementById("helpIcon");
+const helpTooltip = document.getElementById("helpTooltip");
+
+helpIcon.addEventListener("click", () => {
+  helpTooltip.classList.toggle("show");
+});
+document.addEventListener("click", (e) => {
+  if (!helpIcon.contains(e.target) && !helpTooltip.contains(e.target)) {
+    helpTooltip.classList.remove("show");
+  }
+});
+</script>
+
+</body>
+</html>

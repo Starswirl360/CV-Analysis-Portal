@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advanced Options</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+    h2 {
+      margin-top: 40px;
+    }
+    table {
+      width: 100%;
+      max-width: 900px;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px 15px;
+      text-align: left;
+    }
+    th {
+      background: #1a73e8;
+      color: white;
+    }
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #155ab6;
+    }
+    .delete-btn {
+      background-color: #d93025;
+    }
+    .delete-btn:hover {
+      background-color: #a52714;
+    }
+    th.sortable {
+      cursor: pointer;
+      position: relative;
+    }
+    th.sortable::after {
+      content: " ▲";
+      position: absolute;
+      right: 10px;
+      opacity: 0.3;
+    }
+    th.sortable.desc::after {
+      content: " ▼";
+    }
+    th.sortable.active::after {
+      opacity: 1;
+    }
+    .help-icon {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #1a73e8;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      width: 30px;
+      height: 30px;
+      text-align: center;
+      line-height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 2000;
+    }
+    .tooltip-bubble {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      background: white;
+      color: #333;
+      padding: 14px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 300px;
+      font-size: 14px;
+      line-height: 1.4;
+      display: none;
+      z-index: 2000;
+    }
+    .tooltip-bubble.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Advanced Options</h1>
+<a href="/" style="
+  display: inline-block;
+  margin-bottom: 20px;
+  background-color: #1a73e8;
+  color: white;
+  padding: 10px 18px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+">
+  ← Back to Main Panel
+</a>
+
+<h2>Job Criteria</h2>
+<table id="criteria-table">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Form ID</th>
+      <th>Company</th>
+      <th>Position</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<button id="delete-selected-criteria">Delete Selected</button>
+
+<h2>Summary Report Entries</h2>
+<table id="summary-table">
+  <thead>
+    <tr>
+      <th></th>
+      <th>Email</th>
+      <th>Verdict</th>
+      <th>Resume</th>
+      <th>Shortlist Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<button id="delete-selected-summary">Delete Selected</button>
+
+<div class="help-icon" id="helpIcon">?</div>
+<div class="tooltip-bubble" id="helpTooltip">
+  Did an error sneak into the report? Or you uploaded the wrong job offer? This can happen sometimes. You can delete it here.
+</div>
+
+<h2>Form Expiration Time</h2>
+<form id="expire-form" style="margin-bottom: 30px;">
+  <label for="expire-days">Set applications as late after days: </label>
+  <input type="number" id="expire-days" name="expire-days" min="1" required />
+  <button type="submit">Update</button>
+</form>
+
+<script>
+let lastCheckedCriteria = null;
+let lastCheckedSummary = null;
+
+function enableShiftCheckboxSelection(tableSelector, lastCheckedRefName) {
+  const checkboxes = document.querySelectorAll(`${tableSelector} tbody input[type="checkbox"]`);
+  checkboxes.forEach((checkbox) => {
+    checkbox.addEventListener('click', function (e) {
+      let lastChecked = (lastCheckedRefName === 'criteria') ? lastCheckedCriteria : lastCheckedSummary;
+
+      if (e.shiftKey && lastChecked) {
+        const checkboxesArray = Array.from(checkboxes);
+        const start = checkboxesArray.indexOf(this);
+        const end = checkboxesArray.indexOf(lastChecked);
+
+        checkboxesArray.slice(Math.min(start, end), Math.max(start, end) + 1).forEach(cb => cb.checked = true);
+      }
+
+      if (lastCheckedRefName === 'criteria') {
+        lastCheckedCriteria = this;
+      } else {
+        lastCheckedSummary = this;
+      }
+    });
+  });
+}
+
+async function fetchCriteria() {
+  const res = await fetch('/job_criteria_list/');
+  const data = await res.json();
+  const tbody = document.querySelector('#criteria-table tbody');
+  tbody.innerHTML = '';
+  data.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${item.form_id}"></td>
+      <td>${item.form_id}</td>
+      <td>${item.company}</td>
+      <td>${item.position}</td>
+      <td><button class="delete-btn" data-id="${item.form_id}">Delete</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  enableShiftCheckboxSelection('#criteria-table', 'criteria');
+  makeTableSortable('#criteria-table');
+}
+
+async function fetchSummary() {
+  const res = await fetch('/summary_json/');
+  const data = await res.json();
+  const tbody = document.querySelector('#summary-table tbody');
+  tbody.innerHTML = '';
+  data.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" data-email="${item.email}"></td>
+      <td>${item.email}</td>
+      <td>${item.verdict}</td>
+      <td>${item.resume}</td>
+      <td>${item.shortlist_status}</td>
+      <td><button class="delete-btn" data-email="${item.email}">Delete</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  enableShiftCheckboxSelection('#summary-table', 'summary');
+  makeTableSortable('#summary-table');
+}
+
+async function deleteCriteria(form_id) {
+  const res = await fetch(`/delete_job_criteria?form_id=${encodeURIComponent(form_id)}`, { method: 'DELETE' });
+  if (res.ok) await fetchCriteria();
+  else alert('An error occurred');
+}
+
+async function deleteSummary(email) {
+  const res = await fetch(`/delete_summary_entry?email=${encodeURIComponent(email)}`, { method: 'DELETE' });
+  if (res.ok) await fetchSummary();
+  else alert('An error occurred');
+}
+
+function makeTableSortable(tableId) {
+  const table = document.querySelector(tableId);
+  const headers = table.querySelectorAll("th");
+  let sortColumn = null;
+  let sortDirection = 1;
+
+  headers.forEach((th, index) => {
+    if (index === 0 || index === headers.length - 1) return;
+
+    th.classList.add("sortable");
+    th.addEventListener("click", () => {
+      const rows = Array.from(table.querySelectorAll("tbody tr"));
+      const type = rows.length > 0 ? rows[0].children[index].textContent.trim() : '';
+      const isNumeric = !isNaN(parseFloat(type)) && isFinite(type);
+
+      if (sortColumn === index) {
+        sortDirection *= -1;
+      } else {
+        sortColumn = index;
+        sortDirection = 1;
+      }
+
+      headers.forEach(h => h.classList.remove("active", "desc"));
+      th.classList.add("active");
+      if (sortDirection === -1) th.classList.add("desc");
+
+      rows.sort((a, b) => {
+        const aVal = a.children[index].textContent.trim();
+        const bVal = b.children[index].textContent.trim();
+
+        return isNumeric
+          ? (parseFloat(aVal) - parseFloat(bVal)) * sortDirection
+          : aVal.localeCompare(bVal) * sortDirection;
+      });
+
+      const tbody = table.querySelector("tbody");
+      rows.forEach(row => tbody.appendChild(row));
+    });
+  });
+}
+
+const helpIcon = document.getElementById("helpIcon");
+const helpTooltip = document.getElementById("helpTooltip");
+
+helpIcon.addEventListener("click", () => {
+  helpTooltip.classList.toggle("show");
+});
+
+document.addEventListener("click", (e) => {
+  if (!helpIcon.contains(e.target) && !helpTooltip.contains(e.target)) {
+    helpTooltip.classList.remove("show");
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  fetchCriteria();
+  fetchSummary();
+
+  document.querySelector('#criteria-table tbody').addEventListener('click', e => {
+    if (e.target.classList.contains('delete-btn')) {
+      const id = e.target.getAttribute('data-id');
+      if (confirm(`Delete record for: ${id}?`)) deleteCriteria(id);
+    }
+  });
+
+  document.querySelector('#summary-table tbody').addEventListener('click', e => {
+    if (e.target.classList.contains('delete-btn')) {
+      const email = e.target.getAttribute('data-email');
+      if (confirm(`Delete record for: ${email}?`)) deleteSummary(email);
+    }
+  });
+
+  document.querySelector('#delete-selected-criteria').addEventListener('click', () => {
+    const checked = [...document.querySelectorAll('#criteria-table tbody input[type="checkbox"]:checked')];
+    if (checked.length === 0) return alert('No job criteria records selected');
+    if (!confirm(`Delete ${checked.length} record(s)?`)) return;
+    checked.forEach(chk => deleteCriteria(chk.getAttribute('data-id')));
+  });
+
+  document.querySelector('#delete-selected-summary').addEventListener('click', () => {
+    const checked = [...document.querySelectorAll('#summary-table tbody input[type="checkbox"]:checked')];
+    if (checked.length === 0) return alert('No summary records selected');
+    if (!confirm(`Delete ${checked.length} record(s)?`)) return;
+    checked.forEach(chk => deleteSummary(chk.getAttribute('data-email')));
+  });
+
+  (async () => {
+    const res = await fetch('/get_expiration_time/');
+    const data = await res.json();
+    document.getElementById('expire-days').value = data.expiration_time_days || 7;
+  })();
+});
+
+document.getElementById('expire-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const days = parseInt(document.getElementById('expire-days').value, 10);
+
+  if (!days || days < 1) {
+    alert('Please enter a valid number of days (minimum 1)');
+    return;
+  }
+
+  const res = await fetch('/update_expiration_time_global', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ expiration_days: days })
+  });
+
+  if (res.ok) {
+    alert(`Updated expiration time to ${days} day(s).`);
+  } else {
+    alert('Failed to update expiration limit.');
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Shortlist Summary</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px;
+      margin-right: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #6c757d;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 600px;
+      background: white;
+    }
+    th, td {
+      padding: 5px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #008000;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tr:hover {
+      background: #f1f1f1;
+    }
+    .table-container {
+      max-height: 60vh;
+      overflow: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 7px;
+      background: #fff;
+      width: 100%;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-top: 20px;
+    }
+        .help-icon {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #1a73e8;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  width: 30px;
+  height: 30px;
+  text-align: center;
+  line-height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  z-index: 2000;
+}
+
+.tooltip-bubble {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  background: white;
+  color: #333;
+  padding: 14px 18px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-width: 300px;
+  font-size: 14px;
+  line-height: 1.4;
+  display: none;
+  z-index: 2000;
+}
+.tooltip-bubble.show {
+  display: block;
+}
+  </style>
+</head>
+<body>
+
+<a href="/" style="
+  display: inline-block;
+  margin-bottom: 20px;
+  background-color: #1a73e8;
+  color: white;
+  padding: 10px 18px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+">
+  ← Back to Main Panel
+</a>
+<h2>Excel Report</h2>
+<div>
+  <button onclick="downloadExcel()">🡇 Download Excel</button>
+  <button class="secondary" onclick="resetExcel()">♻️ Reset Excel</button>
+</div>
+
+<div class="table-container">
+  <div id="summaryTable">Loading summary...</div>
+</div>
+<div class="help-icon" id="helpIcon">?</div>
+<div class="tooltip-bubble" id="helpTooltip">
+Once applicants submit their completed recruitment forms, the system captures them and analyzes their compliance with the employer's requirements.
+On this page, you'll find a report that you can download as an Excel file.
+</div>
+<script>
+async function downloadExcel() {
+  window.open("/generate_summary_excel/", "_blank");
+}
+
+let currentSortColumn = null;
+let currentSortDirection = 1; // 1 = asc, -1 = desc
+
+async function loadSummaryTable() {
+  const tableDiv = document.getElementById("summaryTable");
+  const downloadBtn = document.querySelector("button[onclick='downloadExcel()']");
+  tableDiv.innerHTML = '<p>Loading summary...</p>';
+  try {
+    const response = await fetch("/summary_json/");
+    const data = await response.json();
+
+    if (!data.length) {
+      tableDiv.innerHTML = '<p>No data yet.</p>';
+      downloadBtn.disabled = true;
+      return;
+    }
+
+    downloadBtn.disabled = false;
+
+    // Funkcja pomocnicza do renderowania tabeli
+    function renderTable(dataToRender) {
+      const table = document.createElement("table");
+
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+
+      const columns = Object.keys(dataToRender[0]);
+
+      columns.forEach((key, colIndex) => {
+        const th = document.createElement("th");
+        th.textContent = key;
+        th.style.cursor = "pointer";
+        th.title = "Kliknij, aby sortować";
+        th.onclick = () => {
+          if (currentSortColumn === colIndex) {
+            currentSortDirection *= -1; // Zmień kierunek
+          } else {
+            currentSortColumn = colIndex;
+            currentSortDirection = 1; // Domyślnie rosnąco
+          }
+
+          const sorted = [...dataToRender].sort((a, b) => {
+            const aVal = Object.values(a)[colIndex];
+            const bVal = Object.values(b)[colIndex];
+
+            const isNumeric = !isNaN(parseFloat(aVal)) && isFinite(aVal);
+            if (isNumeric) {
+              return (parseFloat(aVal) - parseFloat(bVal)) * currentSortDirection;
+            } else {
+              return aVal.toString().localeCompare(bVal.toString()) * currentSortDirection;
+            }
+          });
+
+          renderTable(sorted);
+        };
+        headerRow.appendChild(th);
+      });
+
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      dataToRender.forEach(row => {
+        const tr = document.createElement("tr");
+        Object.values(row).forEach(value => {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      tableDiv.innerHTML = "";
+      tableDiv.appendChild(table);
+    }
+
+    renderTable(data);
+  } catch {
+    tableDiv.innerHTML = "<p>❌ Error loading data.</p>";
+    downloadBtn.disabled = true;
+  }
+}
+
+
+async function resetExcel() {
+  if (!confirm("Are you sure you want to reset your Excel file?")) return;
+  const res = await fetch("/reset_summary/", { method: "POST" });
+  if (res.ok) {
+    alert("✅ Excel file reset.");
+    loadSummaryTable();
+  } else {
+    alert("❌ Could not reset the file.");
+  }
+}
+
+window.addEventListener("load", loadSummaryTable);
+const helpIcon = document.getElementById("helpIcon");
+const helpTooltip = document.getElementById("helpTooltip");
+
+helpIcon.addEventListener("click", () => {
+  helpTooltip.classList.toggle("show");
+});
+
+document.addEventListener("click", (e) => {
+  if (!helpIcon.contains(e.target) && !helpTooltip.contains(e.target)) {
+    helpTooltip.classList.remove("show");
+  }
+});
+</script>
+</body>
+</html>
