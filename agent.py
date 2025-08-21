@@ -76,7 +76,11 @@ async def advanced_options_page():
 
 
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+
+if not api_key:
+    raise RuntimeError("Nie ustawiono zmiennej środowiskowej OPENAI_API_KEY!")
+client = OpenAI(api_key=api_key)
 # ------------------------- Pomocnicze -------------------------
 def extract_text(file: BytesIO, filename: str) -> str:
     file.seek(0)
